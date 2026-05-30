@@ -34,9 +34,9 @@ fn main() {
                     let found =  path_env.split(":") .any(|path|{
                         let file_path = format!("{}/{}", path, arg_second);
                         if std::path::Path::new(&file_path).exists() {
-                            let meta = std::fs::metadata(file_path).unwrap();
+                            let meta = std::fs::metadata(&file_path).unwrap();
                             if meta.permissions().mode() & 0o111 != 0 {
-                                println!("{} is {}", arg_second, path);
+                                println!("{} is {}", arg_second, &file_path);
                             }
                             true
                         } else {
