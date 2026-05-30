@@ -1,6 +1,8 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
 
+const BUILDINS:&[&str] = &["exit", "echo", "type"];
+
 fn main() {
     loop {
         print!("$ ");
