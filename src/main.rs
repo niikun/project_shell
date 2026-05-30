@@ -25,7 +25,7 @@ fn main() {
             "type" => {
                 let arg_second = args.split_whitespace().next().unwrap_or("");
                 match arg_second{
-                    "exit" | "echo" => println!("{} is a shell builtin",arg_second),
+                    "exit" | "echo" | "type"=> println!("{} is a shell builtin",arg_second),
                     _ =>  println!("{}: command not found",arg_second)
                 }
 
