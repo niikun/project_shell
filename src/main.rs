@@ -22,6 +22,14 @@ fn main() {
         match command.trim() {
             "exit" => break,
             "echo" =>println!("{}",args.as_str()),
+            "type" => {
+                let arg_second = args.split_whitespace().next().unwrap_or("");
+                match arg_second{
+                    "exit" | "echo" => println!("{} is a shell builtin",arg_second),
+                    _ =>  println!("{}: command not found",arg_second)
+                }
+
+                }
             _ =>println!("{}: command not found",command.trim())
         }
     }
