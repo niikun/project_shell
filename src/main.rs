@@ -1,6 +1,7 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
 use std::os::unix::fs::PermissionsExt;
+use std::process::Command;
 
 const BUILTINS: &[&str] = &["exit", "echo", "type"];
 
@@ -9,18 +10,18 @@ fn main() {
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
-        let mut msgs = String::new();
+        let mut inputs = String::new();
         let mut args: String = String::new();
         let mut command: String = String::new();
-        io::stdin().read_line(&mut msgs).unwrap();
-        for (i, msg) in msgs.split_whitespace().enumerate() {
+        io::stdin().read_line(&mut inputs).unwrap();
+        for (i, input) in inputs.split_whitespace().enumerate() {
             if i == 0 {
-                command = msg.to_string();
+                command = input.to_string();
             } else if i == 1 {
-                args.push_str(msg);
+                args.push_str(input);
             } else {
                 args.push_str(" ");
-                args.push_str(msg);
+                args.push_str(input);
             }
         }
         match command.trim() {
@@ -36,8 +37,9 @@ fn main() {
                         if std::path::Path::new(&file_path).exists() {
                             let meta = std::fs::metadata(&file_path).unwrap();
                             if meta.permissions().mode() & 0o111 != 0 {
-                            println!("{} is {}", arg_second, &file_path);
-                            true
+                                // println!("{:#o}",meta.permissions().mode());
+                                println!("{} is {}", arg_second, &file_path);
+                                true
                             } else {
                                 false
                             }
@@ -50,7 +52,29 @@ fn main() {
                     }
                 }
             }
-            _ => println!("{}: command not found", command.trim()),
+            _ => {
+                let found:bool = path_env.split(":").any(|path|{
+                    let file_path:String = format!("{}/{}",path,command);
+                    if std::path::Path::new(&file_path).exists() {
+                        let meta = std::fs::metadata(&file_path).unwrap();
+                        if meta.permissions().mode() & 0o111 !=0 {
+                            let mut child = Command::new(&command)
+                                .args(args.split_whitespace())
+                                .spawn()
+                                .unwrap();
+                            child.wait().unwrap();
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                });
+                if !found{
+                    println!("{}: not found", command);
+                }
+            },
         }
     }
 }
