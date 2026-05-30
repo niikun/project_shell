@@ -36,8 +36,8 @@ fn main() {
                         if std::path::Path::new(&file_path).exists() {
                             // let meta = std::fs::metadata(&file_path).unwrap();
                             // if meta.permissions().mode() & 0o111 != 0 {
-                            //     println!("{} is {}", arg_second, &file_path);
-                            // }
+                            println!("{} is {}", arg_second, &file_path);
+                        
                             true
                         } else {
                             false
