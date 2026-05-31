@@ -11,16 +11,16 @@ fn main() {
         print!("$ ");
         io::stdout().flush().unwrap();
         let mut inputs = String::new();
-    
+
         io::stdin().read_line(&mut inputs).unwrap();
-        let mut parts = inputs.split_whitespace();
-        let command = parts.next().unwrap_or("").to_string();
-        let args:Vec<&str> = parts.collect();
+        let parsed = parse_args(&inputs);
+        let command = parsed.first().cloned().unwrap_or_default();
+        let args: Vec<String> = parsed.into_iter().skip(1).collect();
         match command.trim() {
             "exit" => break,
-            "echo" => println!("{}", args.join(" ")),
+            "echo" => println!("{}",args.join(" ")),
             "type" => {
-                let arg_second = args.first().copied().unwrap_or("");
+                let arg_second = args.first().map(|s| s.as_str()).unwrap_or("");
                 if BUILTINS.contains(&arg_second) {
                     println!("{} is a shell builtin", arg_second);
                 } else {
@@ -29,7 +29,6 @@ fn main() {
                         if std::path::Path::new(&file_path).exists() {
                             let meta = std::fs::metadata(&file_path).unwrap();
                             if meta.permissions().mode() & 0o111 != 0 {
-                                // println!("{:#o}",meta.permissions().mode());
                                 println!("{} is {}", arg_second, &file_path);
                                 true
                             } else {
@@ -69,4 +68,29 @@ fn main() {
             },
         }
     }
+}
+
+fn parse_args(input: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut in_single_quote = false;
+
+    for ch in input.chars(){
+        match ch {
+            '\'' => in_single_quote = !in_single_quote,
+            ' ' | '\t' if !in_single_quote => {
+                if !current.is_empty(){
+                    tokens.push(current.clone());
+                    current.clear();
+                }
+            }
+            '\n' => break,
+            _ => current.push(ch),
+        }
+        
+    }
+    if !current.is_empty(){
+            tokens.push(current);
+        }
+    tokens
 }
