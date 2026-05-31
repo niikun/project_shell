@@ -11,24 +11,16 @@ fn main() {
         print!("$ ");
         io::stdout().flush().unwrap();
         let mut inputs = String::new();
-        let mut args: String = String::new();
-        let mut command: String = String::new();
+    
         io::stdin().read_line(&mut inputs).unwrap();
-        for (i, input) in inputs.split_whitespace().enumerate() {
-            if i == 0 {
-                command = input.to_string();
-            } else if i == 1 {
-                args.push_str(input);
-            } else {
-                args.push_str(" ");
-                args.push_str(input);
-            }
-        }
+        let mut parts = inputs.split_whitespace();
+        let command = parts.next().unwrap_or("").to_string();
+        let args:Vec<&str> = parts.collect();
         match command.trim() {
             "exit" => break,
-            "echo" => println!("{}", args),
+            "echo" => println!("{}", args.join(" ")),
             "type" => {
-                let arg_second = args.split_whitespace().next().unwrap_or("");
+                let arg_second = args.first().copied().unwrap_or("");
                 if BUILTINS.contains(&arg_second) {
                     println!("{} is a shell builtin", arg_second);
                 } else {
@@ -59,7 +51,7 @@ fn main() {
                         let meta = std::fs::metadata(&file_path).unwrap();
                         if meta.permissions().mode() & 0o111 !=0 {
                             let mut child = Command::new(&command)
-                                .args(args.split_whitespace())
+                                .args(&args)
                                 .spawn()
                                 .unwrap();
                             child.wait().unwrap();
