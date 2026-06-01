@@ -77,9 +77,10 @@ fn parse_args(input: &str) -> Vec<String> {
     for ch in input.chars() {
         if !is_backslashed{
             match ch {
-                // 課題！！
-                '\\' => is_backslashed = !is_backslashed,
+                '\\' if !in_single_quote => is_backslashed = !is_backslashed,
+                '\\' if in_single_quote => current.push(ch),
                 '\'' if !in_double_quote => in_single_quote = !in_single_quote,
+                '\"' if in_single_quote => current.push(ch),
                 '\"' => in_double_quote = !in_double_quote,
                 ' ' | '\t' if !in_single_quote && !in_double_quote => {
                     if !current.is_empty() {
