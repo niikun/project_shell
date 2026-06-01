@@ -20,46 +20,19 @@ fn main() {
             "exit" => break,
             "echo" => println!("{}", args.join(" ")),
             "type" => {
-                let arg_second = args.first().map(|s| s.as_str()).unwrap_or("");
-                if BUILTINS.contains(&arg_second) {
-                    println!("{} is a shell builtin", arg_second);
+                let cmd = args.first().map(|s| s.as_str()).unwrap_or("");
+                if BUILTINS.contains(&cmd) {
+                    println!("{} is a shell builtin", cmd);
+                } else if let Some(path) = find_in_path(cmd, &path_env) {
+                    println!("{} is {}", cmd, path);
                 } else {
-                    let found = path_env.split(":").any(|path| {
-                        let file_path = format!("{}/{}", path, arg_second);
-                        if std::path::Path::new(&file_path).exists() {
-                            let meta = std::fs::metadata(&file_path).unwrap();
-                            if meta.permissions().mode() & 0o111 != 0 {
-                                println!("{} is {}", arg_second, &file_path);
-                                true
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    });
-                    if !found {
-                        println!("{}: not found", arg_second);
-                    }
+                    println!("{}: not found", cmd);
                 }
             }
             _ => {
-                let found: bool = path_env.split(":").any(|path| {
-                    let file_path: String = format!("{}/{}", path, command);
-                    if std::path::Path::new(&file_path).exists() {
-                        let meta = std::fs::metadata(&file_path).unwrap();
-                        if meta.permissions().mode() & 0o111 != 0 {
-                            let mut child = Command::new(&command).args(&args).spawn().unwrap();
-                            child.wait().unwrap();
-                            true
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                });
-                if !found {
+                if find_in_path(&command, &path_env).is_some() {
+                    Command::new(&command).args(&args).spawn().unwrap().wait().unwrap();
+                } else {
                     println!("{}: not found", command);
                 }
             }
@@ -100,4 +73,16 @@ fn parse_args(input: &str) -> Vec<String> {
         tokens.push(current);
     }
     tokens
+}
+
+fn find_in_path(command: &str, path_env: &str) -> Option<String> {
+    path_env.split(":").find_map(|dir| {
+        let path = format!("{}/{}",dir, command);
+        let meta = std::fs::metadata(&path).ok()?;
+        if meta.permissions().mode() & 0o111 != 0 {
+            Some(path)
+        } else {
+            None
+        }
+    })
 }
