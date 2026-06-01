@@ -72,19 +72,27 @@ fn parse_args(input: &str) -> Vec<String> {
     let mut current = String::new();
     let mut in_single_quote = false;
     let mut in_double_quote: bool = false;
+    let mut is_backslashed:bool = false;
 
     for ch in input.chars() {
-        match ch {
-            '\'' if !in_double_quote => in_single_quote = !in_single_quote,
-            '\"' => in_double_quote = !in_double_quote,
-            ' ' | '\t' if !in_single_quote && !in_double_quote => {
-                if !current.is_empty() {
-                    tokens.push(current.clone());
-                    current.clear();
+        if !is_backslashed{
+            match ch {
+                // 課題！！
+                '\\' => is_backslashed = !is_backslashed,
+                '\'' if !in_double_quote => in_single_quote = !in_single_quote,
+                '\"' => in_double_quote = !in_double_quote,
+                ' ' | '\t' if !in_single_quote && !in_double_quote => {
+                    if !current.is_empty() {
+                        tokens.push(current.clone());
+                        current.clear();
+                    }
                 }
+                '\n' => break,
+                _ => current.push(ch),
             }
-            '\n' => break,
-            _ => current.push(ch),
+        } else {
+            current.push(ch);
+            is_backslashed = !is_backslashed;
         }
     }
     if !current.is_empty() {
