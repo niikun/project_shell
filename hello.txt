@@ -1,0 +1,9 @@
+total 28
+-rw-r--r-- 1 kawata kawata 1987 May 30 06:23 Cargo.lock
+-rw-r--r-- 1 kawata kawata  366 May 30 06:23 Cargo.toml
+-rw-r--r-- 1 kawata kawata 1420 May 30 06:23 README.md
+-rw-r--r-- 1 kawata kawata  284 May 30 06:23 codecrafters.yml
+-rw-r--r-- 1 kawata kawata    0 Jun  4 06:08 hello.txt
+drwxr-xr-x 2 kawata kawata 4096 Jun  4 05:22 src
+drwxr-xr-x 4 kawata kawata 4096 May 30 06:25 target
+-rwxr-xr-x 1 kawata kawata  845 May 30 06:23 your_program.sh
