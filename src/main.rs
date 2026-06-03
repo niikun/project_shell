@@ -18,7 +18,15 @@ fn main() {
         let args: Vec<String> = parsed.into_iter().skip(1).collect();
         match command.trim() {
             "exit" => break,
-            "echo" => println!("{}", args.join(" ")),
+            "echo" => {
+                if let Some(pos) = args.iter().position(|s| s == ">") {
+                    let output_file = &args[pos + 1];
+                    let content = args[..pos].join(" ");
+                    std::fs::write(output_file, content).unwrap();
+                } else {
+                    println!("{}", args.join(" "));
+                }
+            },
             "type" => {
                 let cmd = args.first().map(|s| s.as_str()).unwrap_or("");
                 if BUILTINS.contains(&cmd) {
