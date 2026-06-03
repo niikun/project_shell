@@ -15,16 +15,20 @@ fn main() {
         io::stdin().read_line(&mut inputs).unwrap();
         let parsed = parse_args(&inputs);
         let command = parsed.first().cloned().unwrap_or_default();
-        let args: Vec<String> = parsed.into_iter().skip(1).collect();
+        let all_args: Vec<String> = parsed.into_iter().skip(1).collect();
+        let (args, redirect_file) = if let Some(pos) = all_args.iter().position(|s| s == ">"){
+            (all_args[..pos].to_vec(),all_args.get(pos+1).cloned())
+        } else {
+            (all_args, None)
+        };
         match command.trim() {
             "exit" => break,
             "echo" => {
-                if let Some(pos) = args.iter().position(|s| s == ">") {
-                    let output_file = &args[pos + 1];
-                    let content = args[..pos].join(" ");
-                    std::fs::write(output_file, content).unwrap();
+                let content = args.join(" ") + "\n";
+                if let Some(file) = redirect_file {
+                    std::fs::write(file, content).unwrap();
                 } else {
-                    println!("{}", args.join(" "));
+                    println!("{}", content);
                 }
             },
             "type" => {
@@ -39,7 +43,13 @@ fn main() {
             }
             _ => {
                 if find_in_path(&command, &path_env).is_some() {
-                    Command::new(&command).args(&args).spawn().unwrap().wait().unwrap();
+                    let mut cmd = Command::new(&command);
+                    cmd.args(&args);
+                    if let Some(file) = redirect_file {
+                        let f = std::fs::File::create(file).unwrap();
+                        cmd.stdout(std::process::Stdio::from(f));
+                    }
+                    cmd.spawn().unwrap().wait().unwrap();
                 } else {
                     println!("{}: not found", command);
                 }
