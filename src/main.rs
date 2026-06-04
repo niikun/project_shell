@@ -16,7 +16,7 @@ fn main() {
         let parsed = parse_args(&inputs);
         let command = parsed.first().cloned().unwrap_or_default();
         let all_args: Vec<String> = parsed.into_iter().skip(1).collect();
-        let (args, redirect_file) = if let Some(pos) = all_args.iter().position(|s| s == ">"){
+        let (args, redirect_file) = if let Some(pos) = all_args.iter().position(|s| s == ">" || s == "1>"){
             (all_args[..pos].to_vec(),all_args.get(pos+1).cloned())
         } else {
             (all_args, None)
@@ -24,11 +24,11 @@ fn main() {
         match command.trim() {
             "exit" => break,
             "echo" => {
-                let content = args.join(" ") + "\n";
                 if let Some(file) = redirect_file {
-                    std::fs::write(file, content).unwrap();
+                    std::fs::write(file, args.join(" ")).unwrap();
+                    return;
                 } else {
-                    println!("{}", content);
+                    println!("{}", args.join(" ") + "\n");
                 }
             },
             "type" => {
