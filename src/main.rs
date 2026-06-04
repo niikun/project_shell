@@ -24,11 +24,11 @@ fn main() {
         match command.trim() {
             "exit" => break,
             "echo" => {
+                let content = args.join(" ") + "\n";
                 if let Some(file) = redirect_file {
-                    std::fs::write(file, args.join(" ")).unwrap();
-                    return;
+                    std::fs::write(file, content).unwrap();
                 } else {
-                    println!("{}", args.join(" ") + "\n");
+                    print!("{}", content);
                 }
             },
             "type" => {
