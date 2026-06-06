@@ -81,7 +81,10 @@ fn main() {
                 let redirect = command_info.redirection;
                 match redirect {
                     Some(Redirection::Stdout(file)) => std::fs::write(file, content).unwrap(),
-                    Some(Redirection::Stderr(file)) => std::fs::write(file, "").unwrap(),
+                    Some(Redirection::Stderr(file)) => {
+                        std::fs::write(file, "").unwrap();
+                        print!("{}",content);
+                    },
                     _ => print!("{}", content),
                 }
             },
