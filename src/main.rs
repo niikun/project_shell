@@ -3,7 +3,63 @@ use std::io::{self, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
+
 const BUILTINS: &[&str] = &["exit", "echo", "type"];
+
+enum Redirection {
+    Stdout(String),
+    Stderr(String)
+}
+
+struct CommandInfo {
+    command: String,
+    args: Vec<String>,
+    redirection: Option<Redirection>
+}
+
+impl CommandInfo {
+    fn new(command: String, args:Vec<String>) -> Self {
+        args.iter().position(|s| s == "2>").map(|pos|{
+            let redirect_file = args.get(pos+1).cloned();
+            if let Some(file) = redirect_file {
+                Self {
+                    command:command.clone(),
+                    args: args[..pos].to_vec(),
+                    redirection: Some(Redirection::Stderr(file))
+                }
+            } else {
+                Self {
+                    command: command.clone(),
+                    args: args[..pos].to_vec(),
+                    redirection: None
+                }
+            }
+        }).or_else(|| { 
+            args.iter().position(|s| s == ">" || s == "1>").map(|pos|{
+            let redirect_file = args.get(pos+1).cloned();
+            if let Some(file) = redirect_file {
+                Self {
+                    command:command.clone(),
+                    args: args[..pos].to_vec(),
+                    redirection: Some(Redirection::Stdout(file))
+                }
+            } else {
+                Self {
+                    command: command.clone(),
+                    args: args[..pos].to_vec(),
+                    redirection: None
+                }
+            }
+        })}).unwrap_or_else(|| Self {
+            command,
+            args,
+            redirection: None
+        })
+    }
+    fn redirection(&self){
+
+    }
+}
 
 fn main() {
     let path_env = std::env::var("PATH").unwrap_or(String::from(""));
@@ -16,23 +72,21 @@ fn main() {
         let parsed = parse_args(&inputs);
         let command = parsed.first().cloned().unwrap_or_default();
         let all_args: Vec<String> = parsed.into_iter().skip(1).collect();
-        let (args, redirect_file) = if let Some(pos) = all_args.iter().position(|s| s == ">" || s == "1>"){
-            (all_args[..pos].to_vec(),all_args.get(pos+1).cloned())
-        } else {
-            (all_args, None)
-        };
-        match command.trim() {
+        let command_info = CommandInfo::new(command, all_args);
+
+        match command_info.command.trim() {
             "exit" => break,
             "echo" => {
-                let content = args.join(" ") + "\n";
-                if let Some(file) = redirect_file {
-                    std::fs::write(file, content).unwrap();
-                } else {
-                    print!("{}", content);
+                let content = command_info.args.join(" ") + "\n";
+                let redirect = command_info.redirection;
+                match redirect {
+                    Some(Redirection::Stdout(file)) => std::fs::write(file, content).unwrap(),
+                    Some(Redirection::Stderr(file)) => std::fs::write(file, "").unwrap(),
+                    _ => print!("{}", content),
                 }
             },
             "type" => {
-                let cmd = args.first().map(|s| s.as_str()).unwrap_or("");
+                let cmd = command_info.args.first().map(|s| s.as_str()).unwrap_or("");
                 if BUILTINS.contains(&cmd) {
                     println!("{} is a shell builtin", cmd);
                 } else if let Some(path) = find_in_path(cmd, &path_env) {
@@ -42,16 +96,24 @@ fn main() {
                 }
             }
             _ => {
-                if find_in_path(&command, &path_env).is_some() {
-                    let mut cmd = Command::new(&command);
-                    cmd.args(&args);
-                    if let Some(file) = redirect_file {
-                        let f = std::fs::File::create(file).unwrap();
-                        cmd.stdout(std::process::Stdio::from(f));
+                if find_in_path(&command_info.command, &path_env).is_some() {
+                    let mut cmd = Command::new(&command_info.command);
+                    cmd.args(&command_info.args);
+                    match command_info.redirection {
+                        Some(Redirection::Stdout(file)) => {
+                            let f = std::fs::File::create(file).unwrap();
+                            cmd.stdout(std::process::Stdio::from(f));
+                        }
+                        Some(Redirection::Stderr(file)) => {
+                            let f = std::fs::File::create(file).unwrap();
+                            cmd.stderr(std::process::Stdio::from(f));
+                        }
+                        None => {}
                     }
                     cmd.spawn().unwrap().wait().unwrap();
+                    
                 } else {
-                    println!("{}: not found", command);
+                    println!("{}: not found", command_info.command);
                 }
             }
         }
@@ -104,3 +166,4 @@ fn find_in_path(command: &str, path_env: &str) -> Option<String> {
         }
     })
 }
+
