@@ -114,11 +114,11 @@ fn main() {
                 match redirect {
                     Some(Redirection::AppendStdout(file)) =>{
                         let mut f = OpenOptions::new().create(true).append(true).open(file).unwrap();
-                        f.write_all(&content.into_bytes());
+                        f.write_all(&content.into_bytes()).unwrap();
                     },
                     Some(Redirection::AppendStderr(file)) =>{
-                        // let f = OpenOptions::new().append(true).open(file).unwrap();
-                        // f.write_all("".to_bytes());
+                        let mut f = OpenOptions::new().create(true).append(true).open(file).unwrap();
+                        f.write_all(b"").unwrap();
                         print!("{}",content);
                     },
                     Some(Redirection::Stdout(file)) => write(file, content).unwrap(),
