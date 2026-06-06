@@ -97,7 +97,7 @@ fn main() {
                 let redirect = command_info.redirection;
                 match redirect {
                     Some(Redirection::AppendStdout(file)) =>{
-                        let mut f = OpenOptions::new().append(true).open(file).unwrap();
+                        let mut f = OpenOptions::new().create(true).append(true).open(file).unwrap();
                         f.write_all(&content.into_bytes());
                     },
                     Some(Redirection::AppendStderr(file)) =>{
@@ -128,7 +128,7 @@ fn main() {
                     let mut cmd = Command::new(&command_info.command);
                     match command_info.redirection {
                         Some(Redirection::AppendStdout(file)) => {
-                            let f = OpenOptions::new().append(true).open(file).unwrap();
+                            let f = OpenOptions::new().create(true).append(true).open(file).unwrap();
                             cmd.stdout(std::process::Stdio::from(f));
                         },
                         Some(Redirection::AppendStderr(file)) =>{},
