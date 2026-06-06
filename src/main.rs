@@ -38,7 +38,7 @@ impl CommandInfo {
                 }
             }
         }).or_else(|| { 
-            args.iter().position(|s| s == ">>" ).map(|pos|{
+            args.iter().position(|s| s == ">>" || s == "1>>" ).map(|pos|{
             let redirect_file = args.get(pos+1).cloned();
             if let Some(file) = redirect_file {
                 Self {
