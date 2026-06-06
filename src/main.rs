@@ -22,7 +22,23 @@ struct CommandInfo {
 
 impl CommandInfo {
     fn new(command: String, args:Vec<String>) -> Self {
-        args.iter().position(|s| s == "2>").map(|pos|{
+        args.iter().position(|s| s == "2>>").map(|pos|{
+            let redirect_file = args.get(pos+1).cloned();
+            if let Some(file) = redirect_file {
+                Self {
+                    command:command.clone(),
+                    args: args[..pos].to_vec(),
+                    redirection: Some(Redirection::AppendStderr(file))
+                }
+            } else {
+                Self {
+                    command: command.clone(),
+                    args: args[..pos].to_vec(),
+                    redirection: None
+                }
+            }
+        }).or_else(|| { 
+            args.iter().position(|s| s == "2>" ).map(|pos|{
             let redirect_file = args.get(pos+1).cloned();
             if let Some(file) = redirect_file {
                 Self {
@@ -37,7 +53,7 @@ impl CommandInfo {
                     redirection: None
                 }
             }
-        }).or_else(|| { 
+        })}).or_else(|| { 
             args.iter().position(|s| s == ">>" || s == "1>>" ).map(|pos|{
             let redirect_file = args.get(pos+1).cloned();
             if let Some(file) = redirect_file {
@@ -131,7 +147,10 @@ fn main() {
                             let f = OpenOptions::new().create(true).append(true).open(file).unwrap();
                             cmd.stdout(std::process::Stdio::from(f));
                         },
-                        Some(Redirection::AppendStderr(file)) =>{},
+                        Some(Redirection::AppendStderr(file)) =>{
+                            let f = OpenOptions::new().create(true).append(true).open(file).unwrap();
+                            cmd.stderr(std::process::Stdio::from(f));
+                        },
                         Some(Redirection::Stdout(file)) => {
                             let f = std::fs::File::create(file).unwrap();
                             cmd.stdout(std::process::Stdio::from(f));
