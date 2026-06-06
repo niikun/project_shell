@@ -1,5 +1,6 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
+use std::fs::{write, OpenOptions};
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
@@ -7,6 +8,8 @@ use std::process::Command;
 const BUILTINS: &[&str] = &["exit", "echo", "type"];
 
 enum Redirection {
+    AppendStdout(String),
+    AppendStderr(String),
     Stdout(String),
     Stderr(String)
 }
@@ -35,6 +38,22 @@ impl CommandInfo {
                 }
             }
         }).or_else(|| { 
+            args.iter().position(|s| s == ">>" ).map(|pos|{
+            let redirect_file = args.get(pos+1).cloned();
+            if let Some(file) = redirect_file {
+                Self {
+                    command:command.clone(),
+                    args: args[..pos].to_vec(),
+                    redirection: Some(Redirection::AppendStdout(file))
+                }
+            } else {
+                Self {
+                    command: command.clone(),
+                    args: args[..pos].to_vec(),
+                    redirection: None
+                }
+            }
+        })}).or_else(|| { 
             args.iter().position(|s| s == ">" || s == "1>").map(|pos|{
             let redirect_file = args.get(pos+1).cloned();
             if let Some(file) = redirect_file {
@@ -55,9 +74,6 @@ impl CommandInfo {
             args,
             redirection: None
         })
-    }
-    fn redirection(&self){
-
     }
 }
 
@@ -80,9 +96,18 @@ fn main() {
                 let content = command_info.args.join(" ") + "\n";
                 let redirect = command_info.redirection;
                 match redirect {
-                    Some(Redirection::Stdout(file)) => std::fs::write(file, content).unwrap(),
+                    Some(Redirection::AppendStdout(file)) =>{
+                        let mut f = OpenOptions::new().append(true).open(file).unwrap();
+                        f.write_all(&content.into_bytes());
+                    },
+                    Some(Redirection::AppendStderr(file)) =>{
+                        // let f = OpenOptions::new().append(true).open(file).unwrap();
+                        // f.write_all("".to_bytes());
+                        print!("{}",content);
+                    },
+                    Some(Redirection::Stdout(file)) => write(file, content).unwrap(),
                     Some(Redirection::Stderr(file)) => {
-                        std::fs::write(file, "").unwrap();
+                        write(file, "").unwrap();
                         print!("{}",content);
                     },
                     _ => print!("{}", content),
@@ -101,8 +126,12 @@ fn main() {
             _ => {
                 if find_in_path(&command_info.command, &path_env).is_some() {
                     let mut cmd = Command::new(&command_info.command);
-                    cmd.args(&command_info.args);
                     match command_info.redirection {
+                        Some(Redirection::AppendStdout(file)) => {
+                            let f = OpenOptions::new().append(true).open(file).unwrap();
+                            cmd.stdout(std::process::Stdio::from(f));
+                        },
+                        Some(Redirection::AppendStderr(file)) =>{},
                         Some(Redirection::Stdout(file)) => {
                             let f = std::fs::File::create(file).unwrap();
                             cmd.stdout(std::process::Stdio::from(f));
@@ -113,6 +142,7 @@ fn main() {
                         }
                         None => {}
                     }
+                    cmd.args(&command_info.args);
                     cmd.spawn().unwrap().wait().unwrap();
                     
                 } else {
