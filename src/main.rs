@@ -3,6 +3,41 @@ use std::io::{self, Write};
 use std::fs::{write, OpenOptions};
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
+use rustyline::error::ReadlineError;
+use rustyline::{Cmd, Editor, Result};
+use rustyline::completion::{Completer, Pair};
+use rustyline::Context;
+use rustyline_derive::{Helper, Hinter, Highlighter, Validator};
+use rustyline::history::DefaultHistory;
+
+#[derive(Helper, Hinter, Highlighter, Validator)]
+struct MyHelper {
+    commands:Vec<String>,
+}
+
+impl Completer for MyHelper {
+    type Candidate = Pair;
+
+    fn complete(
+        &self,
+        line:&str,
+        pos:usize,
+        context:&Context<'_>
+    )->rustyline::Result<(usize,Vec<Pair>)>{
+        let current_word = line.split_whitespace().last().unwrap_or("");
+        let start_pos = pos - current_word.len();
+        let mut candidates = Vec::new();
+        for cmd in &self.commands{
+            if cmd.starts_with(current_word){
+                candidates.push(Pair{
+                    display:cmd.clone(),
+                    replacement:cmd.clone() + " ",
+                })
+            }
+        }
+        Ok((start_pos, candidates))
+        }
+    }
 
 
 const BUILTINS: &[&str] = &["exit", "echo", "type"];
@@ -95,12 +130,42 @@ impl CommandInfo {
 
 fn main() {
     let path_env = std::env::var("PATH").unwrap_or(String::from(""));
-    loop {
-        print!("$ ");
-        io::stdout().flush().unwrap();
-        let mut inputs = String::new();
 
-        io::stdin().read_line(&mut inputs).unwrap();
+    let mut rl = Editor::<MyHelper, DefaultHistory>::new().unwrap();
+    let helper = MyHelper{
+            commands:Vec::from([String::from("echo"), String::from("exit")])
+        };
+    rl.set_helper(Some(helper));
+    
+    if rl.load_history("history.txt").is_err() {
+        println!("No previous history.");
+    }
+
+    loop {         
+        let readline = rl.readline("$ ");
+        let mut inputs =String::new();
+
+        match readline {
+            Ok(line) => {
+                rl.add_history_entry(line.as_str());
+                inputs = line.to_string();
+                rl.save_history("history.txt");
+            },
+            Err(ReadlineError::Interrupted) => {
+                println!("CTRL-C");
+                break
+            },
+            Err(ReadlineError::Eof) => {
+                println!("CTRL-D");
+                break
+            },
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break
+            }
+        }
+        
+
         let parsed = parse_args(&inputs);
         let command = parsed.first().cloned().unwrap_or_default();
         let all_args: Vec<String> = parsed.into_iter().skip(1).collect();
@@ -219,3 +284,13 @@ fn find_in_path(command: &str, path_env: &str) -> Option<String> {
     })
 }
 
+fn read_input_line() -> Result<()> {
+    // `()` can be used when no completer is required
+
+    loop {
+        
+    }
+    // #[cfg(feature = "with-file-history")]
+    
+    Ok(())
+}
