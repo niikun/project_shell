@@ -31,7 +31,7 @@ impl Completer for MyHelper {
             if cmd.starts_with(current_word){
                 candidates.push(Pair{
                     display:cmd.clone(),
-                    replacement:cmd.clone(),
+                    replacement:cmd.clone() + " ",
                 })
             }
         }
